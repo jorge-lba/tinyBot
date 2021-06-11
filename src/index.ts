@@ -49,40 +49,89 @@ const bot = async() => {
 
     console.log("reload")
 
-    const inventory = document.querySelector('.list-group')?.querySelectorAll("li")
+    const potions = () => {
 
-    //@ts-ignore
-    const potions = [...inventory]
-      .filter(
+      const inventory = document.querySelector('.list-group')?.querySelectorAll("li")
+
+      //@ts-ignore
+      const potions = [...inventory]
+        .filter(
+          item => item
+            .querySelector('span')
+            ?.textContent.indexOf('Potion') > -1
+        )
+        .map(element => {
+          let [name, amount] = element.querySelector('span').textContent.split('x')
+          name = name.trim()
+          amount = Number(amount)
+
+          const cure = Number(element.querySelector('small').textContent.replace('+','').replace('HP', '').trim())
+
+          return {
+            name,
+            amount,
+            cure,
+            consume:() => element.querySelector('button').click()
+          }
+        })
+
+      const comparePotionCure = (a:any, b:any) => {
+        if (a.cure > b.cure) return -1;
+        if (b.cure > a.cure) return 1;
+      }
+      //@ts-ignore
+      potions.sort(comparePotionCure)
+
+      return potions
+    }
+
+    const books = () => {
+      const inventory = document.querySelector('.list-group')?.querySelectorAll("li")
+
+      //@ts-ignore
+      const books = [...inventory]
+        .filter(
+          item => item
+            .querySelector('span')
+            ?.textContent.indexOf('Book') > -1
+        )
+        .map(element => {
+          let [name, amount] = element.querySelector('span').textContent.split('x')
+          name = name.trim()
+          amount = Number(amount)
+
+          return {
+            name,
+            amount,
+            consume:() => element.querySelector('button').click()
+          }
+        })
+      
+      const [course] = [...inventory].filter(
         item => item
           .querySelector('span')
-          ?.textContent.indexOf('Potion') > -1
+          ?.textContent.indexOf('Course of JP') > -1
       )
       .map(element => {
         let [name, amount] = element.querySelector('span').textContent.split('x')
         name = name.trim()
         amount = Number(amount)
 
-        const cure = Number(element.querySelector('small').textContent.replace('+','').replace('HP', '').trim())
-
         return {
           name,
           amount,
-          cure,
           consume:() => element.querySelector('button').click()
         }
       })
 
-    const comparePotionCure = (a:any, b:any) => {
-      if (a.cure > b.cure) return -1;
-      if (b.cure > a.cure) return 1;
+      books.push(course)
+
+      const indexRebirth = books.findIndex(book => book.name.indexOf('Rebirth') > -1)
+
+      books.splice(indexRebirth, 1)
+
+      return books
     }
-    //@ts-ignore
-    potions.sort(comparePotionCure)
-
-
-
-    // potions[0].querySelector('button').click()
 
     const startBot = () => {
       life = 
@@ -92,8 +141,13 @@ const bot = async() => {
       const [current, total] = life
         //@ts-ignore
         ?.textContent?.split('/') || ["0", "0"]
+
+      books().every(book => {
+        book.consume()
+        return false
+      })
           
-      potions.forEach(potion => {
+      potions().every(potion => {
         life = 
         document
           .querySelector(data.selectorLife)
@@ -103,10 +157,13 @@ const bot = async() => {
           ?.textContent?.split('/') || ["0", "0"]
 
         const diffLife = Number(total) - Number(current)
+
         if(diffLife >= potion.cure && potion.amount > 0) {
           potion.consume()
-          potion.amount--
+          return false
         }
+        
+        return true
       })
 
       if(currentLife === Number(current)){
@@ -122,7 +179,7 @@ const bot = async() => {
     async function waitUntil() {
       return await new Promise(resolve => {
         //@ts-ignore
-        const interval = setInterval(startBot, 100);
+        const interval = setInterval(startBot, 500);
         const final = setInterval(() => {
           if(timeOff > 60000000) {
             timeOff = 0
